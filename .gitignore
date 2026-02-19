@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+venv/
+.venv/
+env/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# LibreOffice lock files
+.~lock.*#
+
+# Data - keep sample structure but ignore actual financial data
+data/sample/*.xlsx
+data/sample/*.pdf
+data/sample/*.png
+data/templates/
+
+# Output files - generated, not tracked
+output/
+
+# Sensitive
+*.pem
+*.key
+tokens.json
+credentials.json
