@@ -38,6 +38,10 @@ data/templates/
 # Output files - generated, not tracked
 output/
 
+# Logs
+logs/
+*.log
+
 # Sensitive
 *.pem
 *.key

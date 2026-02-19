@@ -54,14 +54,15 @@ def main():
 
     code = params.get("code", [None])[0]
     realm_id = params.get("realmId", [None])[0]
+    state = params.get("state", [None])[0]
 
     if not code or not realm_id:
         print("\n[ERROR] Could not parse 'code' or 'realmId' from the URL.")
         print("        Make sure you pasted the full redirect URL.")
         sys.exit(1)
 
-    print(f"\n[3] Exchanging authorization code for tokens...")
-    auth.exchange_code(code, realm_id)
+    print(f"\n[3] Validating CSRF state and exchanging authorization code for tokens...")
+    auth.exchange_code(code, realm_id, state=state or "")
 
     print(f"\n[SUCCESS] Tokens saved. Realm ID: {realm_id}")
     print(f"          You can now run the MCP server: python src/qbo/mcp_server.py")

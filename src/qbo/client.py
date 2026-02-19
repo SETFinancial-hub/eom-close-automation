@@ -4,9 +4,16 @@ QBO API Client
 Wraps Intuit QuickBooks Online REST API v3 calls.
 All report endpoints return pandas DataFrames for easy merging
 with Nortridge portfolio data.
+
+Error handling:
+- HTTP errors: logged with intuit_tid for Intuit support troubleshooting
+- Auth errors: delegated to QBOAuth (auto-refresh / TokenExpiredError)
+- Validation errors: 400 responses parsed and logged with detail
 """
 import os
+import logging
 from typing import Optional
+from pathlib import Path
 
 import requests
 import pandas as pd
@@ -15,6 +22,22 @@ from .auth import QBOAuth
 
 QBO_BASE = "https://quickbooks.api.intuit.com/v3/company"
 SANDBOX_BASE = "https://sandbox-quickbooks.api.intuit.com/v3/company"
+
+# ------------------------------------------------------------------
+# Logging — errors written to logs/qbo.log for Intuit troubleshooting
+# ------------------------------------------------------------------
+_LOG_DIR = Path(__file__).parent.parent.parent / "logs"
+_LOG_DIR.mkdir(exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler(_LOG_DIR / "qbo.log"),
+        logging.StreamHandler(),
+    ],
+)
+log = logging.getLogger("qbo.client")
 
 
 class QBOClient:
@@ -36,7 +59,30 @@ class QBOClient:
             params=params or {},
             timeout=30,
         )
-        resp.raise_for_status()
+
+        # Capture intuit_tid from response headers for Intuit support
+        intuit_tid = resp.headers.get("intuit_tid", "n/a")
+
+        if not resp.ok:
+            # Parse validation/syntax errors from QBO error body
+            try:
+                err_body = resp.json()
+                err_detail = err_body.get("Fault", {}).get("Error", [{}])
+                err_msg = "; ".join(
+                    f"{e.get('code','?')}: {e.get('Message','?')} — {e.get('Detail','')}"
+                    for e in err_detail
+                ) if err_detail else str(err_body)
+            except Exception:
+                err_msg = resp.text[:500]
+
+            log.error(
+                "QBO API error | status=%s | intuit_tid=%s | url=%s | error=%s",
+                resp.status_code, intuit_tid, url, err_msg,
+            )
+            resp.raise_for_status()
+
+        log.info("QBO API call | status=%s | intuit_tid=%s | url=%s",
+                 resp.status_code, intuit_tid, url)
         return resp.json()
 
     # ------------------------------------------------------------------
