@@ -29,11 +29,16 @@ desktop.ini
 # LibreOffice lock files
 .~lock.*#
 
-# Data - keep sample structure but ignore actual financial data
+# Data archives and raw data zips
+*.zip
+
+# Data - all month folders contain sensitive financial data
 data/sample/*.xlsx
 data/sample/*.pdf
 data/sample/*.png
 data/templates/
+data/2025-*/
+data/2026-*/
 
 # Output files - generated, not tracked
 output/

@@ -68,6 +68,7 @@ def parse_charge_offs(filepath: str) -> tuple[pd.DataFrame, ChargeOffSummary]:
         summary.by_portfolio[int(port_id)] = {
             "charge_off_amount": _to_decimal(group["ChargeOffAmount"].sum()),
             "total_charge_off_amt": _to_decimal(group["TotalChargeOffAmt"].sum()),
+            "pc_interest_rebate": _to_decimal(group["PCInterestRebate"].sum()),
             "count": len(group),
         }
 

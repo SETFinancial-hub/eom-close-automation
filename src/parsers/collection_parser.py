@@ -83,6 +83,15 @@ def parse_collection_register(filepath: str) -> tuple[pd.DataFrame, CollectionSu
         summary.by_portfolio[int(port_id)] = {
             "total_collected": _to_decimal(group["TotalCollected"].sum()),
             "principal": _to_decimal(group["Principal"].sum()),
+            "interest_collected": _to_decimal(group["InterestCollected"].sum()),
+            "interest_rebate": _to_decimal(group["InterestRebate"].sum()),
+            "late_fees": _to_decimal(group["LateFees"].sum()),
+            "nsf_fees": _to_decimal(group["NSFFees"].sum()),
+            "insurance_rebate": _to_decimal(group["InsuranceRebate"].sum()),
+            "balance_renewed": _to_decimal(group["BalanceRenewed"].sum()),
+            "recovery": _to_decimal(group["Recovery"].sum()),
+            "amount_to_refund": _to_decimal(group["AmountToRefund"].sum()),
+            "cash_received": _to_decimal(group["CashReceived"].sum()),
             "count": len(group),
         }
 

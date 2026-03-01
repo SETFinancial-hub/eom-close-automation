@@ -30,3 +30,11 @@ LOAN_TYPES = {
 
 VALID_PORTFOLIO_IDS = set(PORTFOLIO_STATE_MAP.keys())
 VALID_BRANCH_IDS = set(BRANCH_MAP.keys())
+
+
+def get_class_name(portfolio_id: int) -> str:
+    """Map portfolio ID to QBO class name."""
+    state = PORTFOLIO_STATE_MAP.get(portfolio_id)
+    if state in (None, "UNKNOWN", "BH"):
+        return "SET"
+    return state

@@ -5,6 +5,8 @@ or can be manually entered. Future: OCR integration.
 """
 from decimal import Decimal, ROUND_HALF_UP
 from dataclasses import dataclass
+import json
+from pathlib import Path
 
 
 @dataclass
@@ -37,6 +39,21 @@ def create_metacorp_sale(
         purchase_price_pct=purchase_pct,
         transfer_amount=transfer_amount,
         closing_date=closing_date,
+    )
+
+
+def load_from_json(json_path: str) -> MetacorpSaleData:
+    """Load Metacorp sale data from a JSON file."""
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+    return MetacorpSaleData(
+        agreement_date=data.get("agreement_date", ""),
+        num_accounts=int(data["num_accounts"]),
+        total_current_balance=Decimal(data["total_balance"]),
+        purchase_price_pct=Decimal(data["purchase_pct"]),
+        transfer_amount=Decimal(data["transfer_amount"]),
+        file_creation_date=data.get("file_creation_date", ""),
+        closing_date=data.get("closing_date", ""),
     )
 
 

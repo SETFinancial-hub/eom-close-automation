@@ -116,6 +116,12 @@ def parse_unearned_register(filepath: str) -> tuple[pd.DataFrame, UnearnedSummar
         summary.by_portfolio[port_int] = {
             "total_unearned_interest": ue_int,
             "current_balance": _to_decimal(group["CurrentBalance"].sum()),
+            "unearned_credit_life": _to_decimal(group["UnearnedNewCreditLife"].sum() + group["UnearnedExistingCreditLife"].sum()),
+            "unearned_disability": _to_decimal(group["UnearnedNewDisability"].sum() + group["UnearnedExistingDisability"].sum()),
+            "unearned_iui": _to_decimal(group["UnearnedNewIUI"].sum() + group["UnearnedExistingIUI"].sum()),
+            "unearned_property": _to_decimal(group["UnearnedNewProperty"].sum() + group["UnearnedExistingProperty"].sum()),
+            "unearned_vsi": _to_decimal(group["UnearnedNewVSI"].sum() + group["UnearnedExistingVSI"].sum()),
+            "interest_collected_month": _to_decimal(group["InterestCollectedMonth"].sum()),
             "count": len(group),
         }
 

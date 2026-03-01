@@ -21,6 +21,7 @@ class JournalEntryLine:
     debit: Decimal = Decimal("0")
     credit: Decimal = Decimal("0")
     memo: str = ""
+    class_name: str = ""
 
 
 @dataclass
@@ -47,7 +48,8 @@ class JournalEntry:
         return abs(self.total_debits - self.total_credits) < Decimal("0.02")
 
     def add_line(self, account_code: str, debit: Decimal = Decimal("0"),
-                 credit: Decimal = Decimal("0"), memo: str = ""):
+                 credit: Decimal = Decimal("0"), memo: str = "",
+                 class_name: str = ""):
         name = ACCOUNT_NAMES.get(account_code, account_code)
         self.lines.append(JournalEntryLine(
             account_code=account_code,
@@ -55,6 +57,7 @@ class JournalEntry:
             debit=_d(debit),
             credit=_d(credit),
             memo=memo,
+            class_name=class_name,
         ))
 
 
@@ -62,6 +65,7 @@ def generate_je1_finance_income(
     prior_month_unearned_interest: Decimal,
     current_month_unearned_interest: Decimal,
     je_date: date,
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-1: Finance Income Recognition (Earned Interest).
@@ -81,15 +85,19 @@ def generate_je1_finance_income(
 
     if earned_interest > 0:
         je.add_line(UNEARNED_PRECOMPUTED_INTEREST, debit=earned_interest,
-                    memo="Decrease in unearned interest (earning)")
+                    memo="Decrease in unearned interest (earning)",
+                    class_name=class_name)
         je.add_line(FINANCE_INCOME, credit=earned_interest,
-                    memo="Earned interest revenue")
+                    memo="Earned interest revenue",
+                    class_name=class_name)
     elif earned_interest < 0:
         # Unearned increased (more new loans than earned) — unusual but possible
         je.add_line(FINANCE_INCOME, debit=abs(earned_interest),
-                    memo="Adjustment - unearned increase exceeded earning")
+                    memo="Adjustment - unearned increase exceeded earning",
+                    class_name=class_name)
         je.add_line(UNEARNED_PRECOMPUTED_INTEREST, credit=abs(earned_interest),
-                    memo="Increase in unearned interest")
+                    memo="Increase in unearned interest",
+                    class_name=class_name)
         je.review_required = True
         je.notes = "Unearned interest increased net — verify new originations vs earnings."
 
@@ -100,6 +108,7 @@ def generate_je2_insurance_earnings(
     prior_unearned_insurance: dict,
     current_unearned_insurance: dict,
     je_date: date,
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-2: Insurance Premium Earnings.
@@ -121,14 +130,18 @@ def generate_je2_insurance_earnings(
         if earned != Decimal("0") and abs(earned) >= Decimal("0.01"):
             if earned > 0:
                 je.add_line(mapping["unearned"], debit=earned,
-                            memo=f"Earned {ins_type} premium")
+                            memo=f"Earned {ins_type} premium",
+                            class_name=class_name)
                 je.add_line(mapping["earned"], credit=earned,
-                            memo=f"{ins_type} commission earned")
+                            memo=f"{ins_type} commission earned",
+                            class_name=class_name)
             else:
                 je.add_line(mapping["earned"], debit=abs(earned),
-                            memo=f"Reverse {ins_type} over-earned")
+                            memo=f"Reverse {ins_type} over-earned",
+                            class_name=class_name)
                 je.add_line(mapping["unearned"], credit=abs(earned),
-                            memo=f"Increase unearned {ins_type}")
+                            memo=f"Increase unearned {ins_type}",
+                            class_name=class_name)
 
     return je
 
@@ -141,6 +154,7 @@ def generate_je3_originations(
     cash_to_borrower: Decimal,
     balance_renewed: Decimal,
     je_date: date,
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-3: Loan Originations.
@@ -160,31 +174,37 @@ def generate_je3_originations(
     # Debit gross receivable for full note amount
     if note_amount > 0:
         je.add_line(LOANS_RECEIVABLE_GROSS, debit=note_amount,
-                    memo="New loan originations - note amount")
+                    memo="New loan originations - note amount",
+                    class_name=class_name)
 
     # Credit unearned interest (finance charge on PC loans)
     if finance_charge > 0:
         je.add_line(UNEARNED_PRECOMPUTED_INTEREST, credit=finance_charge,
-                    memo="Unearned interest on new loans")
+                    memo="Unearned interest on new loans",
+                    class_name=class_name)
 
     # Credit unearned insurance
     if credit_life_premium > 0:
         je.add_line(UNEARNED_LIFE_INS, credit=credit_life_premium,
-                    memo="Unearned life insurance on new loans")
+                    memo="Unearned life insurance on new loans",
+                    class_name=class_name)
     if ah_premium > 0:
         je.add_line(UNEARNED_AH_INS, credit=ah_premium,
-                    memo="Unearned A&H insurance on new loans")
+                    memo="Unearned A&H insurance on new loans",
+                    class_name=class_name)
 
     # Credit bank for net cash disbursed
     # Note: For NLS simple interest loans, NoteAmount = CashToBorrower (no finance charge)
     if cash_to_borrower > 0:
-        je.add_line("FUNDING_BANK", credit=cash_to_borrower,
-                    memo="Cash disbursed to borrowers")
+        je.add_line(FUNDING_BANK, credit=cash_to_borrower,
+                    memo="Cash disbursed to borrowers",
+                    class_name=class_name)
 
     # Credit receivable for renewed balances (nets out the renewal portion)
     if balance_renewed > 0:
         je.add_line(LOANS_RECEIVABLE_GROSS, credit=balance_renewed,
-                    memo="Balance renewed on renewal loans (reduces net new receivable)")
+                    memo="Balance renewed on renewal loans (reduces net new receivable)",
+                    class_name=class_name)
 
     return je
 
@@ -201,6 +221,7 @@ def generate_je4_collections(
     insurance_rebate: Decimal,
     recovery: Decimal,
     je_date: date,
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-4: Collections / Payments.
@@ -225,11 +246,13 @@ def generate_je4_collections(
 
     # DEBITS: Cash in + renewal offset
     if cash_received > 0:
-        je.add_line("PAYMENT_BANK", debit=cash_received,
-                    memo="Cash collections received")
+        je.add_line(PAYMENT_BANK, debit=cash_received,
+                    memo="Cash collections received",
+                    class_name=class_name)
     if balance_renewed > 0:
         je.add_line(LOANS_RECEIVABLE_GROSS, debit=balance_renewed,
-                    memo="Renewal balances (old loan paid by new loan)")
+                    memo="Renewal balances (old loan paid by new loan)",
+                    class_name=class_name)
 
     # CREDITS: Loan balance reduction + fee income
     # The receivable credit = cash - fees - recovery + refunds (the loan-applied portion)
@@ -238,23 +261,29 @@ def generate_je4_collections(
 
     if receivable_credit > 0:
         je.add_line(LOANS_RECEIVABLE_GROSS, credit=receivable_credit,
-                    memo=f"Loan balance reduction (principal ${principal} + interest ${interest_collected})")
+                    memo=f"Loan balance reduction (principal ${principal} + interest ${interest_collected})",
+                    class_name=class_name)
 
     if late_fees > 0:
         je.add_line(DELINQUENT_NSF_FEES, credit=late_fees,
-                    memo="Late fees collected")
+                    memo="Late fees collected",
+                    class_name=class_name)
     if nsf_fees > 0:
         je.add_line(DELINQUENT_NSF_FEES, credit=nsf_fees,
-                    memo="NSF fees collected")
+                    memo="NSF fees collected",
+                    class_name=class_name)
     if amount_to_refund > 0:
         je.add_line(REFUNDS, debit=amount_to_refund,
-                    memo="Customer refunds issued")
+                    memo="Customer refunds issued",
+                    class_name=class_name)
     if insurance_rebate > 0:
         je.add_line(EARNED_INS_REBATES, credit=insurance_rebate,
-                    memo="Insurance premium rebates")
+                    memo="Insurance premium rebates",
+                    class_name=class_name)
     if recovery > 0:
         je.add_line(CUSTOMER_RECOVERIES, credit=recovery,
-                    memo="Collections on charged-off accounts")
+                    memo="Collections on charged-off accounts",
+                    class_name=class_name)
 
     return je
 
@@ -264,6 +293,7 @@ def generate_je5_charge_offs(
     charge_off_amount: Decimal,
     pc_interest_rebate: Decimal,
     je_date: date,
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-5: Charge-Offs.
@@ -286,14 +316,17 @@ def generate_je5_charge_offs(
 
     # Debits: expense + unearned reversal
     je.add_line(BAD_DEBT_WRITEOFFS, debit=charge_off_amount,
-                memo="Net charge-off expense (P&L impact)")
+                memo="Net charge-off expense (P&L impact)",
+                class_name=class_name)
     if pc_interest_rebate > 0:
         je.add_line(UNEARNED_PRECOMPUTED_INTEREST, debit=pc_interest_rebate,
-                    memo="Reverse unearned interest on charged-off loans")
+                    memo="Reverse unearned interest on charged-off loans",
+                    class_name=class_name)
 
     # Credit: accumulated charge-offs (contra to gross receivable)
     je.add_line(ACCUMULATED_CHARGE_OFFS, credit=total_charge_off_amt,
-                memo="Record charge-offs in contra account")
+                memo="Record charge-offs in contra account",
+                class_name=class_name)
 
     return je
 
@@ -303,6 +336,7 @@ def generate_je6_bad_debt_sale(
     je_date: date,
     num_accounts: int = 0,
     total_balance: Decimal = Decimal("0"),
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-6: Bad Debt Sales (Metacorp).
@@ -316,10 +350,12 @@ def generate_je6_bad_debt_sale(
         source_file="Metacorp Closing Statement",
     )
 
-    je.add_line("OPERATING_BANK", debit=transfer_amount,
-                memo=f"Metacorp sale proceeds ({num_accounts} accts)")
+    je.add_line(OPERATING_BANK, debit=transfer_amount,
+                memo=f"Metacorp sale proceeds ({num_accounts} accts)",
+                class_name=class_name)
     je.add_line(SALE_OF_BAD_DEBT, credit=transfer_amount,
-                memo="Revenue from bad debt sale")
+                memo="Revenue from bad debt sale",
+                class_name=class_name)
 
     return je
 
@@ -328,6 +364,7 @@ def generate_je7_pier_interest(
     accrued_interest: Decimal,
     je_date: date,
     ending_balance: Decimal = Decimal("0"),
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-7: Pier Interest Accrual.
@@ -342,9 +379,11 @@ def generate_je7_pier_interest(
     )
 
     je.add_line(INTEREST_EXPENSE, debit=accrued_interest,
-                memo="Pier facility monthly interest")
+                memo="Pier facility monthly interest",
+                class_name=class_name)
     je.add_line(ACCRUED_EXPENSES, credit=accrued_interest,
-                memo="Accrued Pier interest payable")
+                memo="Accrued Pier interest payable",
+                class_name=class_name)
 
     return je
 
@@ -353,6 +392,7 @@ def generate_je8_dpv_interest(
     interest_amount: Decimal,
     je_date: date,
     principal_balance: Decimal = Decimal("0"),
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-8: DPV LLC Interest.
@@ -367,9 +407,11 @@ def generate_je8_dpv_interest(
     )
 
     je.add_line(DPV_INTEREST, debit=interest_amount,
-                memo="DPV LLC BofA interest (SOFR-based)")
-    je.add_line("DPV_BANK", credit=interest_amount,
-                memo="Auto-debited from BofA DDA")
+                memo="DPV LLC BofA interest (SOFR-based)",
+                class_name=class_name)
+    je.add_line(DPV_BANK, credit=interest_amount,
+                memo="Auto-debited from BofA DDA",
+                class_name=class_name)
 
     return je
 
@@ -379,6 +421,7 @@ def generate_je9_allowance(
     je_date: date,
     portfolio_balance: Decimal = Decimal("0"),
     target_allowance_pct: Decimal = Decimal("0"),
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-9: Allowance for Credit Losses.
@@ -400,15 +443,19 @@ def generate_je9_allowance(
     if adjustment_amount > 0:
         # Increase allowance (provision expense)
         je.add_line(ALLOWANCE_ADJUSTMENT, debit=adjustment_amount,
-                    memo="Provision for credit losses")
+                    memo="Provision for credit losses",
+                    class_name=class_name)
         je.add_line(ALLOWANCE_CREDIT_LOSSES, credit=adjustment_amount,
-                    memo="Increase allowance balance")
+                    memo="Increase allowance balance",
+                    class_name=class_name)
     elif adjustment_amount < 0:
         # Decrease allowance (release)
         je.add_line(ALLOWANCE_CREDIT_LOSSES, debit=abs(adjustment_amount),
-                    memo="Release excess allowance")
+                    memo="Release excess allowance",
+                    class_name=class_name)
         je.add_line(ALLOWANCE_ADJUSTMENT, credit=abs(adjustment_amount),
-                    memo="Allowance release (benefit)")
+                    memo="Allowance release (benefit)",
+                    class_name=class_name)
 
     return je
 
@@ -416,6 +463,7 @@ def generate_je9_allowance(
 def generate_je10_recoveries(
     recovery_amount: Decimal,
     je_date: date,
+    class_name: str = "",
 ) -> JournalEntry:
     """
     JE-10: Recoveries on charged-off accounts.
@@ -430,10 +478,12 @@ def generate_je10_recoveries(
     )
 
     if recovery_amount > 0:
-        je.add_line("PAYMENT_BANK", debit=recovery_amount,
-                    memo="Cash recovered on charged-off accounts")
+        je.add_line(PAYMENT_BANK, debit=recovery_amount,
+                    memo="Cash recovered on charged-off accounts",
+                    class_name=class_name)
         je.add_line(CUSTOMER_RECOVERIES, credit=recovery_amount,
-                    memo="Recovery revenue")
+                    memo="Recovery revenue",
+                    class_name=class_name)
 
     return je
 

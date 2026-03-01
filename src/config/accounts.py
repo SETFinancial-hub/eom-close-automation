@@ -53,6 +53,12 @@ EDWARDS_LOC = "320000"
 EDWARDS_PRINCIPAL = "321000"
 EDWARDS_INTEREST = "322000"
 
+# Bank Accounts (Veritex — Dec 2025 and prior; transition to Huntington/TBo in 2026)
+PAYMENT_BANK = "100120"     # Veritex Bank - Payments DDA
+FUNDING_BANK = "100140"     # Veritex Bank - Funding DDA
+OPERATING_BANK = "100150"   # Veritex Bank - Operating DDA
+DPV_BANK = "100120"         # TBD — flagged for review
+
 # Insurance unearned-to-earned mapping
 INSURANCE_MAPPING = {
     "CreditLife": {"unearned": UNEARNED_LIFE_INS, "earned": EARNED_LIFE_INS},
@@ -99,4 +105,7 @@ ACCOUNT_NAMES = {
     "310000": "DPV LLC Line of Credit",
     "31100": "DPV Principal",
     "31200": "DPV Interest",
+    "100120": "Veritex Bank - Payments DDA",
+    "100140": "Veritex Bank - Funding DDA",
+    "100150": "Veritex Bank - Operating DDA",
 }

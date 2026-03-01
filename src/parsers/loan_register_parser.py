@@ -72,6 +72,11 @@ def parse_loan_register(filepath: str) -> tuple[pd.DataFrame, LoanRegisterSummar
     for port_id, group in df.groupby("PortfolioID"):
         summary.by_portfolio[int(port_id)] = {
             "note_amount": _to_decimal(group["NoteAmount"].sum()),
+            "finance_charge": _to_decimal(group["FinanceCharge"].sum()),
+            "cash_to_borrower": _to_decimal(group["CashToBorrower"].sum()),
+            "credit_life_premium": _to_decimal(group["OriginalCreditLifePremium"].sum()),
+            "ah_premium": _to_decimal(group["OriginalAndHPremium"].sum()),
+            "balance_renewed": _to_decimal(group["BalanceRenewed"].sum()),
             "count": len(group),
         }
 
